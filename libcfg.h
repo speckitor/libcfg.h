@@ -1,5 +1,5 @@
 /*
- *  libcfg.h - v0.2.0 - https://github.com/speckitor/cfg.h
+ *  libcfg.h - v0.2.0 - https://github.com/speckitor/libcfg.h
  *
  *  MIT License
  *
