@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#define CFG_IMPLEMENTATION
-#include "cfg.h"
+#define LIBCFG_IMPLEMENTATION
+#include "libcfg.h"
 
 void print_vars(Cfg_Config *cfg)
 {

@@ -1,5 +1,5 @@
 /*
- *  cfg.h - v0.2.0 - https://github.com/speckitor/cfg.h
+ *  libcfg.h - v0.2.0 - https://github.com/speckitor/cfg.h
  *
  *  MIT License
  *
@@ -24,8 +24,8 @@
  *  SOFTWARE.
  */
 
-#ifndef CFG_H_
-#define CFG_H_
+#ifndef LIBCFG_H_
+#define LIBCFG_H_
 
 #include <ctype.h>
 #include <stdio.h>
@@ -156,9 +156,9 @@ Cfg_Variable *cfg_get_array_elem(Cfg_Variable *ctx, size_t idx);
 Cfg_Variable *cfg_get_list_elem(Cfg_Variable *ctx, size_t idx);
 Cfg_Variable *cfg_get_struct_elem(Cfg_Variable *ctx, size_t idx);
 
-#endif // CFG_H_
+#endif // LIBCFG_H_
 
-#ifdef CFG_IMPLEMENTATION
+#ifdef LIBCFG_IMPLEMENTATION
 
 // Private functions and types
 

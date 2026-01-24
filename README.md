@@ -1,4 +1,4 @@
-# cfg.h
+# libcfg.h
 
 Simple single header library for parsing configuration files.
 
