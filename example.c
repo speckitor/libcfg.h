@@ -109,7 +109,6 @@ int main(void)
 
     int res = cfg_load_file(cfg, "./example.cfg");
     if (res != 0) {
-        printf("%s\n", cfg_err_message(cfg));
         cfg_config_deinit(cfg);
         return 1;
     }
