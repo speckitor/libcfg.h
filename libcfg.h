@@ -1244,6 +1244,8 @@ Cfg_Config *cfg_config_init(void)
     cfg->global.vars_len = 0;
     cfg->global.vars_cap = INIT_VARIABLES_NUM;
     cfg->err.type = CFG_ERROR_NONE;
+    cfg->err.line = 0;
+    cfg->err.column = 0;
     return cfg;
 }
 
