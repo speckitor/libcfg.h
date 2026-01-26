@@ -135,7 +135,7 @@ Cfg_Variable *cfg_get_struct(Cfg_Variable *ctx, const char *name);
 
 // Get variables from provided context (safe versions)
 // Return CFG_ERROR_NONE (0) on success, Cfg_Error_Type (int) on error
-// To get more information about error see `cfg_err_type`, `cfg_err_line` and `cfg_err_column`
+// To get more information about error see `cfg_err...` functions
 Cfg_Error_Type cfg_get_int_safe(Cfg_Variable *ctx, const char *name, int *res);
 Cfg_Error_Type cfg_get_double_safe(Cfg_Variable *ctx, const char *name, double *res);
 Cfg_Error_Type cfg_get_bool_safe(Cfg_Variable *ctx, const char *name, bool *res);
@@ -247,28 +247,22 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer);
 
 static Cfg_Lexer *cfg__lexer_create(Cfg_Config *cfg)
 {
-    Cfg_Lexer *lexer = malloc(sizeof(Cfg_Lexer));
+    Cfg_Lexer *lexer = calloc(1, sizeof(Cfg_Lexer));
 
-    lexer->tokens = malloc(sizeof(Cfg_Token) * INIT_TOKENS_NUM);
-    lexer->stack.values = malloc(sizeof(char) * INIT_STACK_SIZE);
+    lexer->tokens = calloc(INIT_TOKENS_NUM, sizeof(Cfg_Token));
+    lexer->stack.values = calloc(INIT_STACK_SIZE, sizeof(char));
 
     if (!lexer || !lexer->tokens || !lexer->stack.values) {
         cfg->err.type = CFG_ERROR_NO_MEMORY;
         return NULL;
     }
-    
-    lexer->cur_token = 0;
-    lexer->tokens_len = 0;
+
     lexer->tokens_cap = INIT_TOKENS_NUM;
 
     lexer->line = 1;
     lexer->column = 1;
 
-    lexer->comment_eol = false;
-    lexer->comment = false;
-
     lexer->stack.cap = INIT_STACK_SIZE;
-    lexer->stack.len = 0;
 
     return lexer;
 }
@@ -338,7 +332,7 @@ static void cfg__string_add_char(char **str, size_t *cap, char ch)
 
 static char *cfg__lexer_parse_string_buffer(Cfg_Lexer *lexer)
 {
-    char *str = malloc(sizeof(char) * INIT_STRING_SIZE);
+    char *str = calloc(INIT_STRING_SIZE, sizeof(char));
     str[0] = '\0';
     size_t cap = INIT_STRING_SIZE;
 
@@ -402,7 +396,7 @@ static char *cfg__lexer_parse_string_buffer(Cfg_Lexer *lexer)
 static char *cfg__lexer_parse_string_stream(Cfg_Lexer *lexer, FILE *stream)
 {
     size_t cap = INIT_STRING_SIZE;
-    char *str = malloc(sizeof(char) * cap);
+    char *str = calloc(cap, sizeof(char));
     str[0] = '\0';
 
     char c = fgetc(stream);
@@ -495,7 +489,7 @@ static void cfg__context_add_variable(Cfg_Config *cfg, Cfg_Lexer *lexer, Cfg_Var
     }
     ctx->vars[ctx->vars_len].prev = ctx;
     if (type & CFG_TYPE_STRUCT || type & CFG_TYPE_ARRAY || type & CFG_TYPE_LIST) {
-        ctx->vars[ctx->vars_len].vars = malloc(sizeof(Cfg_Variable) * INIT_VARIABLES_NUM);
+        ctx->vars[ctx->vars_len].vars = calloc(INIT_VARIABLES_NUM, sizeof(Cfg_Variable));
         if (!ctx->vars[ctx->vars_len].vars) {
             cfg->err.type = CFG_ERROR_NO_MEMORY;
             return;
@@ -632,7 +626,7 @@ static Cfg_Lexer *cfg__buffer_tokenize(Cfg_Config *cfg, char *buffer)
                 }
 
                 size_t len = lexer->ch_current - lexer->str_start;
-                char *value = malloc(sizeof(char) * (len + 1));
+                char *value = calloc((len + 1), sizeof(char));
                 if (!value) {
                     cfg->err.type = CFG_ERROR_NO_MEMORY;
                     return NULL;
@@ -682,7 +676,7 @@ static Cfg_Lexer *cfg__buffer_tokenize(Cfg_Config *cfg, char *buffer)
                 }
 
                 size_t len = lexer->ch_current - lexer->str_start;
-                char *value = malloc(sizeof(char) * (len + 1));
+                char *value = calloc((len + 1), sizeof(char));
                 if (!value) {
                     cfg->err.type = CFG_ERROR_NO_MEMORY;
                     return NULL;
@@ -782,7 +776,7 @@ static Cfg_Lexer *cfg__stream_tokenize(Cfg_Config *cfg, FILE *stream)
             if (isdigit(c)) {
                 size_t len = 0;
                 size_t cap = INIT_STRING_SIZE;
-                char *value = malloc(sizeof(char) * cap);
+                char *value = calloc(cap, sizeof(char));
                 if (!value) {
                     cfg->err.type = CFG_ERROR_NO_MEMORY;
                     return NULL;
@@ -851,7 +845,7 @@ static Cfg_Lexer *cfg__stream_tokenize(Cfg_Config *cfg, FILE *stream)
             } else {
                 size_t len = 0;
                 size_t cap = INIT_STRING_SIZE;
-                char *value = malloc(sizeof(char) * cap);
+                char *value = calloc(cap, sizeof(char));
                 if (!value) {
                     cfg->err.type = CFG_ERROR_NO_MEMORY;
                     return NULL;
@@ -1182,7 +1176,7 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                 if (prev_token & CFG_TOKEN_STRING) {
                     if (!tmp_string_buf) {
                         size_t new_size = sizeof(char) * (strlen(value) + strlen(tokens[i].value) + 1);
-                        tmp_string_buf = malloc(new_size);
+                        tmp_string_buf = calloc(1, new_size);
                         if (!tmp_string_buf) {
                             cfg->err.type = CFG_ERROR_NO_MEMORY;
                             return 1;
@@ -1235,17 +1229,10 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
 
 Cfg_Config *cfg_config_init(void)
 {
-    Cfg_Config *cfg = malloc(sizeof(Cfg_Config));
-    cfg->global.vars = malloc(INIT_VARIABLES_NUM * sizeof(Cfg_Variable));
+    Cfg_Config *cfg = calloc(1, sizeof(Cfg_Config));
+    cfg->global.vars = calloc(INIT_VARIABLES_NUM, sizeof(Cfg_Variable));
     if (!cfg || !cfg->global.vars) return NULL;
-    cfg->global.name = NULL;
-    cfg->global.value = NULL;
-    cfg->global.prev = NULL;
-    cfg->global.vars_len = 0;
     cfg->global.vars_cap = INIT_VARIABLES_NUM;
-    cfg->err.type = CFG_ERROR_NONE;
-    cfg->err.line = 0;
-    cfg->err.column = 0;
     return cfg;
 }
 
