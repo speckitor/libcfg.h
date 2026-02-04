@@ -1,5 +1,5 @@
 /*
- *  libcfg.h - v0.3.0 - https://github.com/speckitor/libcfg.h
+ *  libcfg.h - v0.3.1 - https://github.com/speckitor/libcfg.h
  *
  *  MIT License
  *
@@ -36,13 +36,13 @@
 // Supported variable types
 typedef enum {
     CFG_TYPE_NONE = 0, // If variable does not exist
-    CFG_TYPE_INT = 1,
-    CFG_TYPE_DOUBLE = 2,
-    CFG_TYPE_BOOL = 4,
-    CFG_TYPE_STRING = 8,
-    CFG_TYPE_ARRAY = 16,
-    CFG_TYPE_LIST = 32,
-    CFG_TYPE_STRUCT = 64,
+    CFG_TYPE_INT,
+    CFG_TYPE_DOUBLE,
+    CFG_TYPE_BOOL,
+    CFG_TYPE_STRING,
+    CFG_TYPE_ARRAY,
+    CFG_TYPE_LIST,
+    CFG_TYPE_STRUCT,
 } Cfg_Type;
 
 // Error types
@@ -170,21 +170,21 @@ Cfg_Variable *cfg_get_struct_elem(Cfg_Variable *ctx, size_t idx);
 typedef enum {
     // Types with string literal values
     CFG_TOKEN_EQ = 1,
-    CFG_TOKEN_SEMICOLON = 2,
-    CFG_TOKEN_COMMA = 4,
-    CFG_TOKEN_LEFT_BRACKET = 8,
-    CFG_TOKEN_RIGHT_BRACKET = 16,
-    CFG_TOKEN_LEFT_PARENTHESIS = 32,
-    CFG_TOKEN_RIGHT_PARENTHESIS = 64,
-    CFG_TOKEN_LEFT_CURLY_BRACKET = 128,
-    CFG_TOKEN_RIGHT_CURLY_BRACKET = 256,
-    CFG_TOKEN_EOF = 512,
+    CFG_TOKEN_SEMICOLON = 1 << 1,
+    CFG_TOKEN_COMMA = 1 << 2,
+    CFG_TOKEN_LEFT_BRACKET = 1 << 3,
+    CFG_TOKEN_RIGHT_BRACKET = 1 << 4,
+    CFG_TOKEN_LEFT_PARENTHESIS = 1 << 5,
+    CFG_TOKEN_RIGHT_PARENTHESIS = 1 << 6,
+    CFG_TOKEN_LEFT_CURLY_BRACKET = 1 << 7,
+    CFG_TOKEN_RIGHT_CURLY_BRACKET = 1 << 8,
+    CFG_TOKEN_EOF = 1 << 9,
     // Types with dinamicly allocated values
-    CFG_TOKEN_IDENTIFIER = 1024,
-    CFG_TOKEN_INT = 2048,
-    CFG_TOKEN_DOUBLE = 4096,
-    CFG_TOKEN_BOOL = 8192,
-    CFG_TOKEN_STRING = 16384,
+    CFG_TOKEN_IDENTIFIER = 1 << 10,
+    CFG_TOKEN_INT = 1 << 11,
+    CFG_TOKEN_DOUBLE = 1 << 12,
+    CFG_TOKEN_BOOL = 1 << 13,
+    CFG_TOKEN_STRING = 1 << 14,
 } Cfg_Token_Type;
 
 typedef struct {
@@ -196,8 +196,7 @@ typedef struct {
 
 typedef struct {
     char *values;
-    size_t len;
-    size_t cap;
+    size_t len, cap;
 } Cfg_Stack;
 
 typedef struct {
