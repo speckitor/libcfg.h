@@ -170,7 +170,7 @@ Cfg_Variable *cfg_get_struct_elem(Cfg_Variable *ctx, size_t idx);
 typedef enum {
     // Types with string literal values
     CFG_TOKEN_EQ = 1,
-    CFG_TOKEN_SEMICOLON = 1 << 1,
+    CFG_TOKEN_DELIMITER = 1 << 1,
     CFG_TOKEN_COMMA = 1 << 2,
     CFG_TOKEN_LEFT_BRACKET = 1 << 3,
     CFG_TOKEN_RIGHT_BRACKET = 1 << 4,
@@ -284,7 +284,7 @@ static void cfg__lexer_add_token(Cfg_Lexer *lexer, Cfg_Token_Type type, char *va
         lexer->tokens_cap *= 2;
         lexer->tokens = realloc(lexer->tokens, sizeof(Cfg_Token) * lexer->tokens_cap);
     }
-    
+
     size_t idx = lexer->tokens_len++;
     memset(&lexer->tokens[idx], 0, sizeof(Cfg_Token));
     lexer->tokens[idx].type = type;
@@ -536,6 +536,7 @@ static Cfg_Lexer *cfg__buffer_tokenize(Cfg_Config *cfg, char *buffer)
             lexer->line++;
             lexer->column = 1;
             lexer->ch_current++;
+            cfg__lexer_add_token(lexer, CFG_TOKEN_DELIMITER, ";");
             continue;
         }
 
@@ -575,11 +576,11 @@ static Cfg_Lexer *cfg__buffer_tokenize(Cfg_Config *cfg, char *buffer)
         switch (*lexer->ch_current) {
         case ' ':
             break;
+        case ';':
+            cfg__lexer_add_token(lexer, CFG_TOKEN_DELIMITER, ";");
+            break;
         case '=':
             cfg__lexer_add_token(lexer, CFG_TOKEN_EQ, "=");
-            break;
-        case ';':
-            cfg__lexer_add_token(lexer, CFG_TOKEN_SEMICOLON, ";");
             break;
         case ',':
             cfg__lexer_add_token(lexer, CFG_TOKEN_COMMA, ",");
@@ -656,7 +657,6 @@ static Cfg_Lexer *cfg__buffer_tokenize(Cfg_Config *cfg, char *buffer)
                        *lexer->ch_current != '\0' &&
                        *lexer->ch_current != '\n' &&
                        *lexer->ch_current != '=' &&
-                       *lexer->ch_current != ';' &&
                        *lexer->ch_current != ',' &&
                        *lexer->ch_current != '[' &&
                        *lexer->ch_current != ']' &&
@@ -710,6 +710,7 @@ static Cfg_Lexer *cfg__stream_tokenize(Cfg_Config *cfg, FILE *stream)
             lexer->comment_eol = false;
             lexer->line++;
             lexer->column = 1;
+            cfg__lexer_add_token(lexer, CFG_TOKEN_DELIMITER, ";");
             continue;
         }
 
@@ -744,11 +745,11 @@ static Cfg_Lexer *cfg__stream_tokenize(Cfg_Config *cfg, FILE *stream)
         switch (c) {
         case ' ':
             break;
+        case ';':
+            cfg__lexer_add_token(lexer, CFG_TOKEN_DELIMITER, ";");
+            break;
         case '=':
             cfg__lexer_add_token(lexer, CFG_TOKEN_EQ, "=");
-            break;
-        case ';':
-            cfg__lexer_add_token(lexer, CFG_TOKEN_SEMICOLON, ";");
             break;
         case ',':
             cfg__lexer_add_token(lexer, CFG_TOKEN_COMMA, ",");
@@ -915,7 +916,6 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
     Cfg_Type type = CFG_TYPE_NONE;
     char *name = NULL;
     char *value = NULL;
-    char *tmp_string_buf = NULL;
     Cfg_Token *tokens = lexer->tokens;
     Cfg_Variable *ctx = &cfg->global;
     for (size_t i = lexer->cur_token; i < lexer->tokens_len; ++i) {
@@ -934,20 +934,18 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                                  CFG_TOKEN_BOOL |
                                  CFG_TOKEN_STRING;
                 break;
-            case CFG_TOKEN_SEMICOLON:
+            case CFG_TOKEN_DELIMITER:
+                if (prev_token == CFG_TOKEN_DELIMITER)
+                    continue;
                 if (name != NULL && value != NULL) {
                     cfg__context_add_variable(cfg, lexer, ctx, type, name, value);
-                    if (type == CFG_TYPE_STRING && tmp_string_buf != NULL) {
-                        free(tmp_string_buf);
-                        tmp_string_buf = NULL;
-                    };
                     if (cfg->err.type != CFG_ERROR_NONE) {
                         return 1;
                     }
                 }
                 name = NULL;
                 value = NULL;
-                expected_token = CFG_TOKEN_IDENTIFIER | CFG_TOKEN_EOF;
+                expected_token = CFG_TOKEN_DELIMITER | CFG_TOKEN_IDENTIFIER | CFG_TOKEN_EOF;
                 if (cfg__stack_last_char(lexer) == '{') {
                     expected_token |= CFG_TOKEN_RIGHT_CURLY_BRACKET;
                 }
@@ -963,11 +961,7 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                 if (type != CFG_TYPE_STRUCT && type != CFG_TYPE_LIST && type != CFG_TYPE_ARRAY) {
                     cfg__context_add_variable(cfg, lexer, ctx, type, name, value);
                 }
-                
-                if (type == CFG_TYPE_STRING && tmp_string_buf != NULL) {
-                    free(tmp_string_buf);
-                    tmp_string_buf = NULL;
-                };
+
                 if (cfg->err.type != CFG_ERROR_NONE) {
                     return 1;
                 }
@@ -1020,10 +1014,6 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                         return 1;
                     };
                     cfg__context_add_variable(cfg, lexer, ctx, type, name, value);
-                    if (type == CFG_TYPE_STRING && tmp_string_buf != NULL) {
-                        free(tmp_string_buf);
-                        tmp_string_buf = NULL;
-                    };
                     if (cfg->err.type != CFG_ERROR_NONE) {
                         return 1;
                     }
@@ -1039,7 +1029,7 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                     expected_token = CFG_TOKEN_COMMA | CFG_TOKEN_RIGHT_PARENTHESIS;
                     break;
                 default:
-                    expected_token = CFG_TOKEN_SEMICOLON;
+                    expected_token = CFG_TOKEN_DELIMITER;
                     break;
                 }
                 type = CFG_TYPE_ARRAY;
@@ -1066,10 +1056,6 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
             case CFG_TOKEN_RIGHT_PARENTHESIS:
                 if (value != NULL) {
                     cfg__context_add_variable(cfg, lexer, ctx, type, name, value);
-                    if (type == CFG_TYPE_STRING && tmp_string_buf != NULL) {
-                        free(tmp_string_buf);
-                        tmp_string_buf = NULL;
-                    };
                     if (cfg->err.type != CFG_ERROR_NONE) {
                         return 1;
                     }
@@ -1085,7 +1071,7 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                     expected_token = CFG_TOKEN_COMMA | CFG_TOKEN_RIGHT_PARENTHESIS;
                     break;
                 default:
-                    expected_token = CFG_TOKEN_SEMICOLON;
+                    expected_token = CFG_TOKEN_DELIMITER;
                     break;
                 }
                 type = CFG_TYPE_LIST;
@@ -1094,14 +1080,14 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                 cfg__stack_add_char(lexer, '{');
                 type = CFG_TYPE_STRUCT;
                 value = NULL;
-                
+
                 cfg__context_add_variable(cfg, lexer, ctx, type, name, value);
                 if (cfg->err.type != CFG_ERROR_NONE) {
                     return 1;
                 }
                 name = NULL;
                 ctx = &ctx->vars[ctx->vars_len - 1];
-                expected_token = CFG_TOKEN_IDENTIFIER | CFG_TOKEN_RIGHT_CURLY_BRACKET;
+                expected_token = CFG_TOKEN_DELIMITER | CFG_TOKEN_IDENTIFIER | CFG_TOKEN_RIGHT_CURLY_BRACKET;
                 break;
             case CFG_TOKEN_RIGHT_CURLY_BRACKET:
                 cfg__stack_pop_char(lexer);
@@ -1116,7 +1102,7 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                     expected_token = CFG_TOKEN_COMMA | CFG_TOKEN_RIGHT_PARENTHESIS;
                     break;
                 default:
-                    expected_token = CFG_TOKEN_SEMICOLON;
+                    expected_token = CFG_TOKEN_DELIMITER;
                     break;
                 }
                 type = CFG_TYPE_STRUCT;
@@ -1136,7 +1122,7 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                     expected_token = CFG_TOKEN_COMMA | CFG_TOKEN_RIGHT_PARENTHESIS;
                     break;
                 default:
-                    expected_token = CFG_TOKEN_SEMICOLON;
+                    expected_token = CFG_TOKEN_DELIMITER;
                     break;
                 }
                 break;
@@ -1151,7 +1137,7 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                     expected_token = CFG_TOKEN_COMMA | CFG_TOKEN_RIGHT_PARENTHESIS;
                     break;
                 default:
-                    expected_token = CFG_TOKEN_SEMICOLON;
+                    expected_token = CFG_TOKEN_DELIMITER;
                     break;
                 }
                 break;
@@ -1166,36 +1152,13 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                     expected_token = CFG_TOKEN_COMMA | CFG_TOKEN_RIGHT_PARENTHESIS;
                     break;
                 default:
-                    expected_token = CFG_TOKEN_SEMICOLON;
+                    expected_token = CFG_TOKEN_DELIMITER;
                     break;
                 }
                 break;
             case CFG_TOKEN_STRING:
                 type = CFG_TYPE_STRING;
-                if (prev_token & CFG_TOKEN_STRING) {
-                    if (!tmp_string_buf) {
-                        size_t new_size = sizeof(char) * (strlen(value) + strlen(tokens[i].value) + 1);
-                        tmp_string_buf = calloc(1, new_size);
-                        if (!tmp_string_buf) {
-                            cfg->err.type = CFG_ERROR_NO_MEMORY;
-                            return 1;
-                        }
-                        strncpy(tmp_string_buf, value, new_size);
-                        strncat(tmp_string_buf, tokens[i].value, new_size);
-                        value = tmp_string_buf;
-                    } else {
-                        size_t new_size = sizeof(char) * (strlen(value) + strlen(tokens[i].value) + 1);
-                        tmp_string_buf = realloc(tmp_string_buf, new_size);
-                        if (!tmp_string_buf) {
-                            cfg->err.type = CFG_ERROR_NO_MEMORY;
-                            return 1;
-                        }
-                        strncat(tmp_string_buf, tokens[i].value, new_size);
-                        value = tmp_string_buf;
-                    }
-                } else {
-                    value = tokens[i].value;
-                }
+                value = tokens[i].value;
                 switch (cfg__stack_last_char(lexer)) {
                 case '[':
                     expected_token = CFG_TOKEN_COMMA | CFG_TOKEN_RIGHT_BRACKET;
@@ -1204,10 +1167,9 @@ static int cfg__parse_tokens(Cfg_Config *cfg, Cfg_Lexer *lexer)
                     expected_token = CFG_TOKEN_COMMA | CFG_TOKEN_RIGHT_PARENTHESIS;
                     break;
                 default:
-                    expected_token = CFG_TOKEN_SEMICOLON;
+                    expected_token = CFG_TOKEN_DELIMITER;
                     break;
                 }
-                expected_token |= CFG_TOKEN_STRING;
                 break;
             default:
                 break;
@@ -1245,20 +1207,24 @@ void cfg_config_deinit(Cfg_Config *cfg)
 Cfg_Error_Type cfg_load_buffer(Cfg_Config *cfg, char *buffer)
 {
     Cfg_Lexer *lexer = cfg__buffer_tokenize(cfg, buffer);
-    if (!lexer) return cfg->err.type;
+    if (!lexer)
+        return cfg->err.type;
     int res = cfg__parse_tokens(cfg, lexer);
     cfg__lexer_free(lexer);
-    if (res != 0) return cfg->err.type;
+    if (res != 0)
+        return cfg->err.type;
     return CFG_ERROR_NONE;
 }
 
 Cfg_Error_Type cfg_load_stream(Cfg_Config *cfg, FILE *stream)
 {
     Cfg_Lexer *lexer = cfg__stream_tokenize(cfg, stream);
-    if (!lexer) return cfg->err.type;
+    if (!lexer)
+        return cfg->err.type;
     int res = cfg__parse_tokens(cfg, lexer);
     cfg__lexer_free(lexer);
-    if (res != 0) return cfg->err.type;
+    if (res != 0)
+        return cfg->err.type;
     return CFG_ERROR_NONE;
 }
 

@@ -15,16 +15,16 @@ void print_vars(Cfg_Config *cfg)
     // If there is no variable with provided name
     // these functions return 0/0.0/NULL/false (depending on return type)
     int number = cfg_get_int(global, "number");
-    printf("number = %d;\n", number);
+    printf("number = %d\n", number);
 
     double Double = cfg_get_double(global, "double");
-    printf("double = %lf;\n", Double);
+    printf("double = %lf\n", Double);
 
     bool boolean = cfg_get_bool(global, "boolean");
-    printf("boolean = %s;\n", boolean ? "true" : "false");
+    printf("boolean = %s\n", boolean ? "true" : "false");
 
     char *string = cfg_get_string(global, "string");
-    printf("string = %s;\n", string);
+    printf("string = %s\n", string);
 
     // Getting arrays, lists and structs
     //
@@ -49,7 +49,7 @@ void print_vars(Cfg_Config *cfg)
         }
     }
 
-    printf("];\n");
+    printf("]\n");
 
     // Structs use curly brackets and contain named variables
     Cfg_Variable *structure = cfg_get_struct(global, "structure");
@@ -57,10 +57,10 @@ void print_vars(Cfg_Config *cfg)
     printf("structure = {\n");
 
     int structure_a = cfg_get_int(structure, "a");
-    printf("\ta = %d;\n", structure_a);
+    printf("\ta = %d\n", structure_a);
 
     int structure_b = cfg_get_int(structure, "b");
-    printf("\tb = %d;\n", structure_b);
+    printf("\tb = %d\n", structure_b);
 
     // Nested structure
     Cfg_Variable *nested = cfg_get_struct(structure, "nested");
@@ -83,7 +83,7 @@ void print_vars(Cfg_Config *cfg)
         }
     }
 
-    printf("];\n");
+    printf("]\n");
 
     // Nested list
     Cfg_Variable *nested_list = cfg_get_list(nested, "list");
@@ -96,11 +96,11 @@ void print_vars(Cfg_Config *cfg)
     double list_double = cfg_get_double_elem(nested_list, 2);
     printf("%lf, ", list_double);
     bool list_bool = cfg_get_double_elem(nested_list, 3);
-    printf("%s);\n", list_bool ? "true" : "false");
+    printf("%s)\n", list_bool ? "true" : "false");
 
-    printf("\t};\n");
+    printf("\t}\n");
 
-    printf("};\n");
+    printf("}\n");
 }
 
 int main(void)
